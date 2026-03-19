@@ -1,0 +1,58 @@
+# ============================================================
+#  3D Sensor Calibration & Fusion — Default Configuration
+# ============================================================
+
+# ----- Paths -----
+paths:
+  data_dir: "data"
+  output_dir: "data/output"
+  calibration_images: "data/calibration_images"
+  point_clouds: "data/point_clouds"
+  depth_maps: "data/depth_maps"
+  rgb_images: "data/rgb_images"
+
+# ----- Calibration -----
+calibration:
+  board_type: "checkerboard"           # checkerboard | charuco
+  board_size: [9, 6]                   # inner corners (cols, rows)
+  square_size: 0.025                   # metres
+  image_format: "png"
+  refine_criteria:
+    max_iter: 30
+    epsilon: 0.001
+
+# ----- Registration (ICP) -----
+registration:
+  icp:
+    method: "point_to_plane"           # point_to_point | point_to_plane
+    max_iterations: 200
+    tolerance: 1.0e-6
+    max_correspondence_distance: 0.05  # metres
+    voxel_size: 0.005                  # down-sample before ICP
+  global:
+    voxel_size: 0.05
+    fpfh_radius_multiplier: 5.0
+    fpfh_max_nn: 100
+    ransac_distance_threshold_multiplier: 1.5
+    ransac_max_iterations: 4000000
+    ransac_confidence: 0.999
+
+# ----- Fusion -----
+fusion:
+  depth_scale: 1000.0                  # raw depth → metres divisor
+  depth_trunc: 3.0                     # max depth in metres
+  voxel_size: 0.005
+  statistical_outlier:
+    nb_neighbors: 20
+    std_ratio: 2.0
+
+# ----- Logging -----
+logging:
+  level: "INFO"
+  log_file: "data/output/pipeline.log"
+
+# ----- Visualization -----
+visualization:
+  enabled: true
+  point_size: 2.0
+  background_color: [0.1, 0.1, 0.1]
