@@ -75,7 +75,8 @@ class TestMultiSensorFusion:
     def test_merge_identity_transforms(self):
         clouds = [self._make_random_cloud() for _ in range(3)]
         transforms = [RigidTransform() for _ in range(3)]
-        merged = fuse_multi_sensor(clouds, transforms, voxel_size=0)
+        merged = fuse_multi_sensor(clouds, transforms, voxel_size=0,
+                                    statistical_outlier_nb=0)
         total_input = sum(len(c.points) for c in clouds)
         assert len(merged.points) == total_input
 
