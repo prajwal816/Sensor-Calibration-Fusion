@@ -118,3 +118,126 @@ def show_pointclouds(
         vis.destroy_window()
     except Exception as exc:  # noqa: BLE001
         logger.warning("Could not open visualizer: %s", exc)
+
+
+# --------------------------------------------------------------------------- #
+#  ICP convergence curve
+# --------------------------------------------------------------------------- #
+
+def plot_convergence(
+    convergence_history: list[dict],
+    title: str = "ICP Convergence",
+    save_path: Optional[str] = None,
+) -> None:
+    """Plot fitness and inlier RMSE over ICP iterations.
+
+    Parameters
+    ----------
+    convergence_history : list of dicts with keys ``iteration``,
+        ``fitness``, ``inlier_rmse``, and optionally ``scale``.
+    """
+    iters = [h["iteration"] for h in convergence_history]
+    fitness = [h["fitness"] for h in convergence_history]
+    rmse = [h["inlier_rmse"] for h in convergence_history]
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+
+    # Fitness
+    ax1.plot(iters, fitness, "o-", color="#2ECC71", markersize=3, linewidth=1.5, label="Fitness")
+    ax1.set_xlabel("Iteration")
+    ax1.set_ylabel("Fitness")
+    ax1.set_title("Fitness Convergence")
+    ax1.set_ylim(-0.05, 1.05)
+    ax1.grid(True, alpha=0.3)
+    ax1.legend()
+
+    # RMSE
+    ax2.plot(iters, rmse, "s-", color="#E74C3C", markersize=3, linewidth=1.5, label="Inlier RMSE")
+    ax2.set_xlabel("Iteration")
+    ax2.set_ylabel("Inlier RMSE")
+    ax2.set_title("RMSE Convergence")
+    ax2.grid(True, alpha=0.3)
+    ax2.legend()
+
+    # Shade multi-scale regions if present
+    if "scale" in convergence_history[0]:
+        scale_colors = ["#3498DB", "#9B59B6", "#F39C12", "#1ABC9C"]
+        scales = sorted(set(h.get("scale", 0) for h in convergence_history))
+        for s in scales:
+            s_entries = [h for h in convergence_history if h.get("scale", 0) == s]
+            s_iters = [h["iteration"] for h in s_entries]
+            color = scale_colors[s % len(scale_colors)]
+            if s_iters:
+                for ax in (ax1, ax2):
+                    ax.axvspan(
+                        min(s_iters) - 0.5,
+                        max(s_iters) + 0.5,
+                        alpha=0.1,
+                        color=color,
+                        label=f"Scale {s}" if ax is ax1 else None,
+                    )
+        ax1.legend(fontsize=8)
+
+    fig.suptitle(title, fontsize=14, fontweight="bold")
+    fig.tight_layout()
+    if save_path:
+        fig.savefig(save_path, dpi=150)
+        logger.info("Saved convergence plot to %s", save_path)
+    plt.close(fig)
+
+
+# --------------------------------------------------------------------------- #
+#  Before / After registration comparison
+# --------------------------------------------------------------------------- #
+
+def plot_registration_comparison(
+    before_metrics: dict,
+    after_metrics: dict,
+    save_path: Optional[str] = None,
+) -> None:
+    """Bar chart comparing before and after registration metrics.
+
+    Parameters
+    ----------
+    before_metrics, after_metrics : dicts with keys ``fitness``,
+        ``inlier_rmse``, and optionally ``chamfer``.
+    """
+    labels = []
+    before_vals = []
+    after_vals = []
+
+    for key in ["fitness", "inlier_rmse", "chamfer"]:
+        if key in before_metrics and key in after_metrics:
+            labels.append(key.replace("_", " ").title())
+            before_vals.append(before_metrics[key])
+            after_vals.append(after_metrics[key])
+
+    x = np.arange(len(labels))
+    width = 0.35
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    bars1 = ax.bar(x - width / 2, before_vals, width, label="Before", color="#E74C3C", alpha=0.85)
+    bars2 = ax.bar(x + width / 2, after_vals, width, label="After", color="#2ECC71", alpha=0.85)
+
+    ax.set_ylabel("Value")
+    ax.set_title("Registration: Before vs After", fontsize=14, fontweight="bold")
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.legend()
+
+    # Value annotations
+    for bar in bars1:
+        ax.annotate(f"{bar.get_height():.4f}",
+                     xy=(bar.get_x() + bar.get_width() / 2, bar.get_height()),
+                     xytext=(0, 4), textcoords="offset points", ha="center", fontsize=8)
+    for bar in bars2:
+        ax.annotate(f"{bar.get_height():.4f}",
+                     xy=(bar.get_x() + bar.get_width() / 2, bar.get_height()),
+                     xytext=(0, 4), textcoords="offset points", ha="center", fontsize=8)
+
+    fig.tight_layout()
+    if save_path:
+        fig.savefig(save_path, dpi=150)
+        logger.info("Saved registration comparison to %s", save_path)
+    plt.close(fig)
+
