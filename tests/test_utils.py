@@ -35,6 +35,13 @@ class TestLogger:
             log = get_logger("test_file_handler", log_file=log_file)
             log.info("hello")
             assert os.path.exists(log_file)
+            # Close handlers so Windows can delete the file
+            for handler in log.handlers[:]:
+                handler.close()
+                log.removeHandler(handler)
+            # Remove from logger singleton cache
+            import src.utils.logger as _lmod
+            _lmod._INITIALISED_LOGGERS.pop("test_file_handler", None)
 
 
 class TestIOUtils:
